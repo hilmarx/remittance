@@ -7,7 +7,7 @@ contract Remittance {
     struct SingleRemittance {
         address sender;
         address receiver;
-        bytes pwHash;
+        bytes32 pwHash;
         uint amount;
     }
     // Mapping to store all Single Remittances
@@ -21,18 +21,38 @@ contract Remittance {
         index = 0;
     }
 
-    function createRemittance(address receiver, bytes memory pwHash)
+    function createRemittance(address receiver, bytes32 pwHash)
         public
         payable
-        returns (bool success) 
+        returns (uint _index) 
     {
         // Check if msg.value is greater than 0
         require( msg.value > 0, "You cannot send 0 ether" );
         // Check if receiver address is not null address
         require( receiver != address(0), "Address must not be null address" );
         remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value);
-        return true;
+        index++;
+        return index;
     }
 
+    function withdrawRemittance(uint _index, string memory pw1, string memory pw2) 
+    public 
+    returns (bool success)
+    {
+        SingleRemittance storage selectedRemittance = remittances[_index];
+        // Check if msg.sender is receiver
+        require(selectedRemittance.receiver == msg.sender, "You're not the receiver of this remittance");
+        // Check if amount in Remittance is greater than 0
+        require(selectedRemittance.amount > 0, "check if amount of remittance is greater than 0");
+        // Check if passwords were inputted correctly
+        require(selectedRemittance.pwHash == keccak256(abi.encodePacked(pw1, pw2)) ||selectedRemittance.pwHash == keccak256(abi.encodePacked(pw2, pw1)), "wrong password");
+
+        uint withdrawAmount = selectedRemittance.amount;
+        // Delete selectedRemittance from storage mapping
+        delete remittances[_index];
+        // Transfer funds to receiver
+        msg.sender.transfer(withdrawAmount);
+        return true;
+    }
 }
 
