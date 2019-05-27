@@ -1,13 +1,14 @@
 pragma solidity >=0.4.21 <0.6.0;
 
 import './SafeMath.sol';
+import './Stoppable.sol';
 
 /// @title Remittance - Transfer ETH via a local exchange
 /// @author hilmarx
 /// @notice You can use this contract to transfer ETH to a recipient that does not hold an ethereum address through a trusted third party, without giving that party the ability to withdraw the funds without the actual recipients permission
 /// @dev This is a test version, please don't use in production
 
-contract Remittance {
+contract Remittance is Stoppable {
     
     using SafeMath for uint256;
     
@@ -28,9 +29,6 @@ contract Remittance {
     // Index for searching through remittances mapping. Only contract can modify it
     uint internal index;
 
-    // Owner of the contract
-    address public owner; 
-
     // Event Listeners
 
     // Event when Remittance gets created
@@ -43,7 +41,6 @@ contract Remittance {
     event LogRemittanceCanceledAndWithdrawn(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
 
     constructor() public {
-        owner = msg.sender;
         index = 0;
     }
 
@@ -51,6 +48,7 @@ contract Remittance {
     function createRemittance(address receiver, bytes32 pwHash)
         public
         payable
+        onlyIfRunning
         returns (uint _index) 
     {
         // Check if msg.value is greater than 0
@@ -61,7 +59,7 @@ contract Remittance {
 
         // Set deadline to now + 48 hours
 
-        uint newDeadline = now.sum(172800);
+        uint newDeadline = now.add(172800);
 
         // Create new Single Remittance and store in the remittance mapping
         remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value, newDeadline);
@@ -70,7 +68,7 @@ contract Remittance {
         emit LogRemittanceCreation(msg.sender, receiver, index, msg.value);
         
         // increase index counter
-        index++;
+        index = index.add(1);
 
         return index;
     }
@@ -78,6 +76,7 @@ contract Remittance {
     ///@dev enables receiver of remittance to withdraw their funds from the remittance
     function withdrawRemittance(uint _index, string memory pw1, string memory pw2) 
     public 
+    onlyIfRunning
     returns (bool success)
     {
         // Get the respective Single Remittances using the index
@@ -109,6 +108,7 @@ contract Remittance {
 
     function senderWithdrawRemittance(uint _index) 
         public 
+        onlyIfRunning
         returns (bool success)
     {
         // Get the respective Single Remittances using the index
