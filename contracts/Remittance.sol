@@ -14,6 +14,7 @@ contract Remittance {
         address receiver;
         bytes32 pwHash;
         uint amount;
+        uint deadline;
     }
 
     // Mapping to store all Single Remittances
@@ -50,8 +51,12 @@ contract Remittance {
         // Check if receiver address is not null address
         require( receiver != address(0), "Address must not be null address" );
 
+        // Set deadline to now + 48 hours
+
+        uint newDeadline = now + 172800;
+
         // Create new Single Remittance and store in the remittance mapping
-        remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value);
+        remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value, newDeadline);
        
         // Emit event that Remittance was created
         emit LogRemittanceCreation(msg.sender, receiver, index, msg.value);
