@@ -1,11 +1,16 @@
 pragma solidity >=0.4.21 <0.6.0;
 
+import './SafeMath.sol';
+
 /// @title Remittance - Transfer ETH via a local exchange
 /// @author hilmarx
 /// @notice You can use this contract to transfer ETH to a recipient that does not hold an ethereum address through a trusted third party, without giving that party the ability to withdraw the funds without the actual recipients permission
 /// @dev This is a test version, please don't use in production
 
 contract Remittance {
+    
+    using SafeMath for uint256;
+    
     // State variables
     
     // Struct storing individual remittances
@@ -56,7 +61,7 @@ contract Remittance {
 
         // Set deadline to now + 48 hours
 
-        uint newDeadline = now + 172800;
+        uint newDeadline = now.sum(172800);
 
         // Create new Single Remittance and store in the remittance mapping
         remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value, newDeadline);
@@ -120,7 +125,7 @@ contract Remittance {
 
         // Delete selectedRemittance from storage mapping
         delete remittances[_index];
-        
+
         // emit withdrawal event
         emit LogRemittanceCanceledAndWithdrawn(selectedRemittance.sender, msg.sender, index, withdrawAmount);
 
