@@ -31,8 +31,11 @@ contract Remittance {
     // Event when Remittance gets created
     event LogRemittanceCreation(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
 
-    // Event when Remittance gets withdrawn
+    // Event when Remittance gets withdrawn by receiver
     event LogRemittancewithdrawal(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
+
+    // Event when Remittance gets cancelled and withdrawn by sender
+    event LogRemittanceCanceledAndWithdrawn(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
 
     constructor() public {
         owner = msg.sender;
@@ -97,6 +100,35 @@ contract Remittance {
         msg.sender.transfer(withdrawAmount);
 
         return true;
+    }
+
+    function senderWithdrawRemittance(uint _index) 
+        public 
+        returns (bool success)
+    {
+        // Get the respective Single Remittances using the index
+        SingleRemittance storage selectedRemittance = remittances[_index];
+
+        // Make sure sender is msg.sender
+        require(selectedRemittance.sender == msg.sender, "You are not the sender of the remittance");
+
+        // Make sure deadline unix timestamp is smaller than the current time
+        require(selectedRemittance.deadline < now, "You cannot withdraw your funds yet");
+
+        // Store withdrawal amount to be used after Remittance gets deleted
+        uint withdrawAmount = selectedRemittance.amount;
+
+        // Delete selectedRemittance from storage mapping
+        delete remittances[_index];
+        
+        // emit withdrawal event
+        emit LogRemittanceCanceledAndWithdrawn(selectedRemittance.sender, msg.sender, index, withdrawAmount);
+
+        // Transfer funds to receiver
+        msg.sender.transfer(withdrawAmount);
+
+        return true;
+
     }
 }
 
