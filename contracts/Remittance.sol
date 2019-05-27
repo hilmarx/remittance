@@ -1,5 +1,10 @@
 pragma solidity >=0.4.21 <0.6.0;
 
+/// @title Remittance - Transfer ETH via a local exchange
+/// @author hilmarx
+/// @notice You can use this contract to transfer ETH to a recipient that does not hold an ethereum address through a trusted third party, without giving that party the ability to withdraw the funds without the actual recipients permission
+/// @dev This is a test version, please don't use in production
+
 contract Remittance {
     // State variables
     
@@ -22,8 +27,10 @@ contract Remittance {
 
     // Event Listeners
 
+    // Event when Remittance gets created
     event LogRemittanceCreation(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
 
+    // Event when Remittance gets withdrawn
     event LogRemittancewithdrawal(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
 
     constructor() public {
@@ -31,6 +38,7 @@ contract Remittance {
         index = 0;
     }
 
+    ///@dev create Remittance with receiver address and pwHash
     function createRemittance(address receiver, bytes32 pwHash)
         public
         payable
@@ -38,28 +46,42 @@ contract Remittance {
     {
         // Check if msg.value is greater than 0
         require( msg.value > 0, "You cannot send 0 ether" );
+
         // Check if receiver address is not null address
         require( receiver != address(0), "Address must not be null address" );
 
+        // Create new Single Remittance and store in the remittance mapping
         remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value);
+       
+        // Emit event that Remittance was created
         emit LogRemittanceCreation(msg.sender, receiver, index, msg.value);
+        
+        // increase index counter
         index++;
+
         return index;
     }
 
+    ///@dev enables receiver of remittance to withdraw their funds from the remittance
     function withdrawRemittance(uint _index, string memory pw1, string memory pw2) 
     public 
     returns (bool success)
     {
+        // Get the respective Single Remittances using the index
         SingleRemittance storage selectedRemittance = remittances[_index];
+
         // Check if msg.sender is receiver
         require(selectedRemittance.receiver == msg.sender, "You're not the receiver of this remittance");
+
         // Check if amount in Remittance is greater than 0
         require(selectedRemittance.amount > 0, "check if amount of remittance is greater than 0");
+
         // Check if passwords were inputted correctly
         require(selectedRemittance.pwHash == keccak256(abi.encodePacked(pw1, pw2)) ||selectedRemittance.pwHash == keccak256(abi.encodePacked(pw2, pw1)), "wrong password");
 
+        // Store withdrawal amount to be used after Remittance gets deleted
         uint withdrawAmount = selectedRemittance.amount;
+
         // Delete selectedRemittance from storage mapping
         delete remittances[_index];
 
@@ -68,6 +90,7 @@ contract Remittance {
 
         // Transfer funds to receiver
         msg.sender.transfer(withdrawAmount);
+
         return true;
     }
 }
