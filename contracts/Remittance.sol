@@ -10,11 +10,21 @@ contract Remittance {
         bytes32 pwHash;
         uint amount;
     }
+
     // Mapping to store all Single Remittances
     mapping(uint => SingleRemittance) public remittances;
+
     // Index for searching through remittances mapping. Only contract can modify it
     uint internal index;
+
+    // Owner of the contract
     address public owner; 
+
+    // Event Listeners
+
+    event LogRemittanceCreation(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
+
+    event LogRemittancewithdrawal(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
 
     constructor() public {
         owner = msg.sender;
@@ -30,7 +40,9 @@ contract Remittance {
         require( msg.value > 0, "You cannot send 0 ether" );
         // Check if receiver address is not null address
         require( receiver != address(0), "Address must not be null address" );
+
         remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value);
+        emit LogRemittanceCreation(msg.sender, receiver, index, msg.value);
         index++;
         return index;
     }
@@ -50,6 +62,10 @@ contract Remittance {
         uint withdrawAmount = selectedRemittance.amount;
         // Delete selectedRemittance from storage mapping
         delete remittances[_index];
+
+        // emit withdrawal event
+        emit LogRemittancewithdrawal(selectedRemittance.sender, msg.sender, index, withdrawAmount);
+
         // Transfer funds to receiver
         msg.sender.transfer(withdrawAmount);
         return true;
