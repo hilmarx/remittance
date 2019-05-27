@@ -7,7 +7,7 @@ contract Remittance {
     struct SingleRemittance {
         address sender;
         address receiver;
-        bytes32 hash;
+        bytes pwHash;
         uint amount;
     }
     // Mapping to store all Single Remittances
@@ -20,7 +20,19 @@ contract Remittance {
         owner = msg.sender;
         index = 0;
     }
-    
+
+    function createRemittance(address receiver, bytes memory pwHash)
+        public
+        payable
+        returns (bool success) 
+    {
+        // Check if msg.value is greater than 0
+        require( msg.value > 0, "You cannot send 0 ether" );
+        // Check if receiver address is not null address
+        require( receiver != address(0), "Address must not be null address" );
+        remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value);
+        return true;
+    }
 
 }
 
