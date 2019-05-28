@@ -29,6 +29,9 @@ contract Remittance is Stoppable {
     // Index for searching through remittances mapping. Only contract can modify it
     uint internal index;
 
+    // Owner balance
+    uint public ownerBalance;
+
     // Event Listeners
 
     // Event when Remittance gets created
@@ -39,6 +42,9 @@ contract Remittance is Stoppable {
 
     // Event when Remittance gets cancelled and withdrawn by sender
     event LogRemittanceCanceledAndWithdrawn(address indexed sender, address indexed receiver, uint indexed remittanceIndex, uint amount);
+
+    // Event when Owner withdrew the collected fees
+    event LogOwnerWithdraw(uint indexed amount, address indexed ownerAddress);
 
     constructor() public {
         index = 0;
@@ -52,7 +58,7 @@ contract Remittance is Stoppable {
         returns (uint _index) 
     {
         // Check if msg.value is greater than 0
-        require( msg.value > 0, "You cannot send 0 ether" );
+        require( msg.value > 30000000000000000, "You cannot send less than the owner fee (0.0321566 ether)" );
 
         // Check if receiver address is not null address
         require( receiver != address(0), "Address must not be null address" );
@@ -61,8 +67,16 @@ contract Remittance is Stoppable {
 
         uint newDeadline = now.add(172800);
 
+        // Take 30000000000000000 owner fee (smaller then deployment fees of 32156600000000000)
+
+        uint amountAfterFee = msg.value.sub(30000000000000000);
+
+        // update owner balance
+
+        ownerBalance = ownerBalance.add(30000000000000000);
+
         // Create new Single Remittance and store in the remittance mapping
-        remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, msg.value, newDeadline);
+        remittances[index] = SingleRemittance(msg.sender, receiver, pwHash, amountAfterFee, newDeadline);
        
         // Emit event that Remittance was created
         emit LogRemittanceCreation(msg.sender, receiver, index, msg.value);
@@ -135,5 +149,32 @@ contract Remittance is Stoppable {
         return true;
 
     }
+
+    ///@dev enables owner to withdraw collected fees
+    function withdrawOwnerBalance() 
+    public 
+    onlyIfRunning
+    onlyOwner
+    returns (bool success)
+    {
+        // Check if balance of owner is greater than 0
+        require(ownerBalance > 0, "owner balance is zero");
+
+        // Copy ownerBalance to memory
+        uint ownerTransfer = ownerBalance;
+
+        // Optimistic accounting
+        ownerBalance = 0;
+
+        // Emit withdraw event
+        emit LogOwnerWithdraw(ownerTransfer, msg.sender);
+
+        // Transfer ETH to owner
+        msg.sender.transfer(ownerTransfer);
+
+        // Return true upon success
+        return true;
+    }
+
 }
 
