@@ -57,7 +57,7 @@ contract Remittance is Stoppable {
         onlyIfRunning
         returns (uint _index) 
     {
-        // Check if msg.value is greater than 0
+        // Check if msg.value is greater than owner fee
         require( msg.value > 30000000000000000, "You cannot send less than the owner fee (0.0321566 ether)" );
 
         // Check if receiver address is not null address
